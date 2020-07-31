@@ -29,7 +29,9 @@ app.get("/", (req, res) => {
 
 function fetchCalendar() {
     return new Promise((resolve, reject) => {
-        const semester = ((new Date().getFullYear() - 1911) - ((new Date().getMonth() >= 8) ? 0 : 1)).toString();
+        const month = parseInt(new Date().toLocaleString('zh-TW', {timeZone: 'Asia/Taipei'}).split('/')[1]);
+        const year = parseInt(new Date().toLocaleString('zh-TW', {timeZone: 'Asia/Taipei'}).split('/')[0]);
+        const semester = ((year - 1911) - ((month >= 8) ? 0 : 1)).toString();
         const academicUrl = 'https://academic.ntou.edu.tw';
         const corsUrl = 'https://cors-anywhere.herokuapp.com/';
         const calendarPath = './cse-calendar.json';
