@@ -54,11 +54,16 @@ function fetchCalendar() {
                         const calendarHTML = HTMLParser.parse(res);
                         const calendarDom = calendarHTML.querySelectorAll('a').filter(a => a.getAttribute("title") && (a.getAttribute("title").includes('行事曆') && a.getAttribute("title").includes(semester)))[0];
 
-                        const uri = calendarDom.getAttribute("href").includes(academicUrl) ? calendarDom.getAttribute("href") : academicUrl + calendarDom.getAttribute("href");
-
-                        if (fs.existsSync(calendarPath)) fs.unlinkSync(calendarPath);
-                        fs.writeFileSync(calendarPath, JSON.stringify({ semester, uri }));
-                        resolve(uri);
+                        if (calendarDom) {
+                            const uri = calendarDom.getAttribute("href").includes(academicUrl) ? calendarDom.getAttribute("href") : academicUrl + calendarDom.getAttribute("href");
+    
+                            if (fs.existsSync(calendarPath)) fs.unlinkSync(calendarPath);
+                            fs.writeFileSync(calendarPath, JSON.stringify({ semester, uri }));
+                            resolve(uri);
+                        } else {
+                            console.log(calendarHTML.querySelectorAll('a'));
+                            reject("Error");
+                        }
                     });
                 } else reject("Error");
             }).catch(error => {
