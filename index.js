@@ -61,7 +61,10 @@ function fetchCalendar() {
                             fs.writeFileSync(calendarPath, JSON.stringify({ semester, uri }));
                             resolve(uri);
                         } else {
-                            console.log(calendarHTML.querySelectorAll('a'));
+                            console.log(calendarHTML.querySelectorAll('a').filter(a => a.getAttribute("title") && (a.getAttribute("title").includes('行事曆')))[0]);
+                            console.log(calendarHTML.querySelectorAll('a').filter(a => a.getAttribute("title") && (a.getAttribute("title").includes(semester)))[0]);
+                            console.log(semester);
+                            console.log(typeof semester);
                             reject("Error");
                         }
                     });
