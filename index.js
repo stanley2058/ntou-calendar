@@ -29,8 +29,8 @@ app.get("/", (req, res) => {
 
 function fetchCalendar() {
     return new Promise((resolve, reject) => {
-        const month = parseInt(new Date().toLocaleString('zh-TW', {timeZone: 'Asia/Taipei'}).split('/')[1]);
-        const year = parseInt(new Date().toLocaleString('zh-TW', {timeZone: 'Asia/Taipei'}).split('/')[0]);
+        const year = parseInt(new Date(new Date().getTime() + 3600000*8).toISOString().split('-')[0]);
+        const month = parseInt(new Date(new Date().getTime() + 3600000*8).toISOString().split('-')[1]);
         const semester = ((year - 1911) - ((month >= 8) ? 0 : 1)).toString();
         const academicUrl = 'https://academic.ntou.edu.tw';
         const corsUrl = 'https://cors-anywhere.herokuapp.com/';
@@ -61,10 +61,9 @@ function fetchCalendar() {
                             fs.writeFileSync(calendarPath, JSON.stringify({ semester, uri }));
                             resolve(uri);
                         } else {
-                            console.log(calendarHTML.querySelectorAll('a').filter(a => a.getAttribute("title") && (a.getAttribute("title").includes('行事曆')))[0]);
-                            console.log(calendarHTML.querySelectorAll('a').filter(a => a.getAttribute("title") && (a.getAttribute("title").includes(semester)))[0]);
+                            console.log(year);
+                            console.log(month);
                             console.log(semester);
-                            console.log(typeof semester);
                             reject("Error");
                         }
                     });
