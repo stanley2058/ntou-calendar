@@ -14,8 +14,8 @@ const corsOptions = {
         'http://www.cs.ntou.edu.tw',
         'https://cs.ntou.edu.tw',
         'http://cs.ntou.edu.tw',
-        'https://r066.ntou.edu.tw',
-        'http://r066.ntou.edu.tw',
+        'https://wordpress.cse.ntou.edu.tw',
+        'http://wordpress.cse.ntou.edu.tw',
     ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -39,12 +39,13 @@ function fetchCalendar() {
         const month = parseInt(new Date(new Date().getTime() + 3600000*8).toISOString().split('-')[1]);
         const semester = ((year - 1911) - ((month >= 8) ? 0 : 1)).toString();
         const academicUrl = 'https://academic.ntou.edu.tw';
+        const corsUrl = 'https://cors-anywhere.herokuapp.com/';
         const calendarPath = './cse-calendar.json';
         const calendarObj = fs.existsSync(calendarPath) ? JSON.parse(fs.readFileSync(calendarPath).toString()) : null;
         
         if (calendarObj && (calendarObj['semester'] === semester)) resolve(calendarObj['uri']);
         else {
-            fetch('https://academic.ntou.edu.tw/index.php', {
+            fetch(corsUrl + 'https://academic.ntou.edu.tw/index.php', {
                 headers: {"X-Requested-With": "XMLHttpRequest"}
             }).then(res => res.text()).then(res => {
                 const indexHtml = HTMLParser.parse(res);
@@ -53,7 +54,7 @@ function fetchCalendar() {
 
                 if (calendarUrlDom) {
                     const url = academicUrl + calendarUrlDom.getAttribute('href');
-                    fetch(url, {
+                    fetch(corsUrl + url, {
                         headers: {"X-Requested-With": "XMLHttpRequest"}
                     }).then(res => res.text()).then(res => {
                         const calendarHTML = HTMLParser.parse(res);
