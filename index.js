@@ -34,49 +34,40 @@ app.get("/", (req, res) => {
 });
 
 function fetchCalendar() {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
         const year = parseInt(new Date(new Date().getTime() + 3600000*8).toISOString().split('-')[0]);
         const month = parseInt(new Date(new Date().getTime() + 3600000*8).toISOString().split('-')[1]);
         const semester = ((year - 1911) - ((month >= 8) ? 0 : 1)).toString();
         const academicUrl = 'https://academic.ntou.edu.tw';
-        const corsUrl = 'https://cors-anywhere.herokuapp.com/';
         const calendarPath = './cse-calendar.json';
         const calendarObj = fs.existsSync(calendarPath) ? JSON.parse(fs.readFileSync(calendarPath).toString()) : null;
         
         if (calendarObj && (calendarObj['semester'] === semester)) resolve(calendarObj['uri']);
         else {
-            fetch(corsUrl + 'https://academic.ntou.edu.tw/index.php', {
-                headers: {"X-Requested-With": "XMLHttpRequest"}
-            }).then(res => res.text()).then(res => {
-                const indexHtml = HTMLParser.parse(res);
-                let calendarUrlDom = null;
-                if (indexHtml) calendarUrlDom = indexHtml.querySelectorAll('a').filter(ele => ele.getAttribute("title") === "校園行事曆")[0];
+            const indexRes = await fetch(academicUrl, {headers: {"X-Requested-With": "XMLHttpRequest"}}).then(res => res.text());
+            const indexHtml = HTMLParser.parse(indexRes);
+            let calendarUrlDom = null;
+            if (indexHtml) calendarUrlDom = [...indexHtml.querySelectorAll('a')].filter(ele => ele.getAttribute("title") === "校園行事曆")[0];
+            
+            if (calendarUrlDom) {
+                const url = academicUrl + calendarUrlDom.getAttribute('href');
+                const calendarRes = await fetch(url, {headers: {"X-Requested-With": "XMLHttpRequest"}}).then(res => res.text());
+                const calendarHTML = HTMLParser.parse(calendarRes);
+                const calendarDom = calendarHTML.querySelectorAll('a').filter(a => a.getAttribute("title") && (a.getAttribute("title").includes('行事曆') && a.getAttribute("title").includes(semester)))[0];
+                
+                if (calendarDom) {
+                    const uri = calendarDom.getAttribute("href").includes(academicUrl) ? calendarDom.getAttribute("href") : academicUrl + calendarDom.getAttribute("href");
 
-                if (calendarUrlDom) {
-                    const url = academicUrl + calendarUrlDom.getAttribute('href');
-                    fetch(corsUrl + url, {
-                        headers: {"X-Requested-With": "XMLHttpRequest"}
-                    }).then(res => res.text()).then(res => {
-                        const calendarHTML = HTMLParser.parse(res);
-                        const calendarDom = calendarHTML.querySelectorAll('a').filter(a => a.getAttribute("title") && (a.getAttribute("title").includes('行事曆') && a.getAttribute("title").includes(semester)))[0];
-
-                        if (calendarDom) {
-                            const uri = calendarDom.getAttribute("href").includes(academicUrl) ? calendarDom.getAttribute("href") : academicUrl + calendarDom.getAttribute("href");
-    
-                            if (fs.existsSync(calendarPath)) fs.unlinkSync(calendarPath);
-                            fs.writeFileSync(calendarPath, JSON.stringify({ semester, uri }));
-                            resolve(uri);
-                        } else {
-                            console.log(year);
-                            console.log(month);
-                            console.log(semester);
-                            reject("Error");
-                        }
-                    });
-                } else reject("Error");
-            }).catch(error => {
-                reject(error);
-            });
+                    if (fs.existsSync(calendarPath)) fs.unlinkSync(calendarPath);
+                    fs.writeFileSync(calendarPath, JSON.stringify({ semester, uri }));
+                    resolve(uri);
+                } else {
+                    console.log(year);
+                    console.log(month);
+                    console.log(semester);
+                    reject("Error parsing calendar");
+                }
+            } else reject("Error parsing index");
         }
     });
 }
