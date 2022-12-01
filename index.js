@@ -1,75 +1,54 @@
-const express = require('express');
-const cors = require('cors');
-const fs = require('fs');
-const fetch = require('node-fetch');
-const HTMLParser = require('node-html-parser');
+import * as fs from "fs";
+import fetch from "node-fetch";
+import * as HTMLParser from "node-html-parser";
 
-const corsOptions = {
-    origin: [
-        'https://www.cse.ntou.edu.tw',
-        'http://www.cse.ntou.edu.tw',
-        'https://cse.ntou.edu.tw',
-        'http://cse.ntou.edu.tw',
-        'https://www.cs.ntou.edu.tw',
-        'http://www.cs.ntou.edu.tw',
-        'https://cs.ntou.edu.tw',
-        'http://cs.ntou.edu.tw',
-        'https://wordpress.cse.ntou.edu.tw',
-        'http://wordpress.cse.ntou.edu.tw',
-    ],
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true,
-};
-
-const PORT = process.env.PORT || 3000;
-
-const app = express();
-app.use(cors(corsOptions));
-
-app.get("/", (req, res) => {
-    fetchCalendar().then(result => {
-        res.send(result);
-    }).catch(err => res.status(500).send(err));
-});
-
-function fetchCalendar() {
-    return new Promise(async (resolve, reject) => {
-        const year = parseInt(new Date(new Date().getTime() + 3600000*8).toISOString().split('-')[0]);
-        const month = parseInt(new Date(new Date().getTime() + 3600000*8).toISOString().split('-')[1]);
-        const semester = ((year - 1911) - ((month >= 8) ? 0 : 1)).toString();
-        const academicUrl = 'https://academic.ntou.edu.tw';
-        const calendarPath = './cse-calendar.json';
-        const calendarObj = fs.existsSync(calendarPath) ? JSON.parse(fs.readFileSync(calendarPath).toString()) : null;
-        
-        if (calendarObj && (calendarObj['semester'] === semester)) resolve(calendarObj['uri']);
-        else {
-            const indexRes = await fetch(academicUrl, {headers: {"X-Requested-With": "XMLHttpRequest"}}).then(res => res.text());
-            const indexHtml = HTMLParser.parse(indexRes);
-            let calendarUrlDom = null;
-            if (indexHtml) calendarUrlDom = [...indexHtml.querySelectorAll('a')].filter(ele => ele.getAttribute("title") === "校園行事曆")[0];
-            
-            if (calendarUrlDom) {
-                const url = academicUrl + calendarUrlDom.getAttribute('href');
-                const calendarRes = await fetch(url, {headers: {"X-Requested-With": "XMLHttpRequest"}}).then(res => res.text());
-                const calendarHTML = HTMLParser.parse(calendarRes);
-                const calendarDom = calendarHTML.querySelectorAll('a').filter(a => a.getAttribute("title") && (a.getAttribute("title").includes('行事曆') && a.getAttribute("title").includes(semester)))[0];
-                
-                if (calendarDom) {
-                    const uri = calendarDom.getAttribute("href").includes(academicUrl) ? calendarDom.getAttribute("href") : academicUrl + calendarDom.getAttribute("href");
-
-                    if (fs.existsSync(calendarPath)) fs.unlinkSync(calendarPath);
-                    fs.writeFileSync(calendarPath, JSON.stringify({ semester, uri }));
-                    resolve(uri);
-                } else {
-                    console.log(year);
-                    console.log(month);
-                    console.log(semester);
-                    reject("Error parsing calendar");
-                }
-            } else reject("Error parsing index");
-        }
-    });
+function getSemester() {
+  const year = parseInt(
+    new Date(new Date().getTime() + 3600000 * 8).toISOString().split("-")[0]
+  );
+  const month = parseInt(
+    new Date(new Date().getTime() + 3600000 * 8).toISOString().split("-")[1]
+  );
+  const semester = (year - 1911 - (month >= 8 ? 0 : 1)).toString();
+  return semester;
 }
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}!`));
+async function fetchCalendar() {
+  const academicUrl = "https://academic.ntou.edu.tw";
+  const outputJsonPath = "calendar.json";
+  const semester = getSemester();
+
+  const indexRes = await fetch(academicUrl).then((res) => res.text());
+  const indexHtml = HTMLParser.parse(indexRes);
+  let calendarUrlDom = null;
+  if (indexHtml) {
+    calendarUrlDom = [...indexHtml.querySelectorAll("a")].filter(
+      (ele) => ele.getAttribute("title") === "校園行事曆"
+    )[0];
+  }
+
+  if (calendarUrlDom) {
+    const url = academicUrl + calendarUrlDom.getAttribute("href");
+    const calendarRes = await fetch(url).then((res) => res.text());
+    const calendarHTML = HTMLParser.parse(calendarRes);
+    const calendarDom = calendarHTML
+      .querySelectorAll("a")
+      .filter(
+        (a) =>
+          a.getAttribute("title") &&
+          a.getAttribute("title")?.includes("行事曆") &&
+          a.getAttribute("title")?.includes(semester)
+      )[0];
+
+    if (calendarDom) {
+      const uri = calendarDom.getAttribute("href")?.includes(academicUrl)
+        ? calendarDom.getAttribute("href")
+        : academicUrl + calendarDom.getAttribute("href");
+
+      if (fs.existsSync(outputJsonPath)) fs.unlinkSync(outputJsonPath);
+      fs.writeFileSync(outputJsonPath, JSON.stringify({ semester, uri }));
+    } else throw new Error("cannot parse calendar");
+  } else throw new Error("cannot parse index");
+}
+
+fetchCalendar();

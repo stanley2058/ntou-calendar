@@ -1,0 +1,20 @@
+name: Update-NTOU-Calendar
+
+on:
+  create:
+  push:
+  schedule:
+    - cron: "* */24 * * *"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: generate
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v3
+      - run: npm i
+      - run: npm run start
+      - uses: stefanzweifel/git-auto-commit-action@v4
